@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/ll_play_container"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/cover"
+    android:orientation="vertical"
+    android:paddingBottom="10dp"
+    android:paddingTop="5dp">
+
+    <!-- @drawable/play_bg -->
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="10dp"
+        android:paddingLeft="10dp">
+
+        <ImageView
+            android:id="@+id/iv_play_back"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:contentDescription="@string/app_name"
+            android:padding="10dp"
+            android:src="@drawable/arrow_right_normal" />
+
+        <TextView
+            android:id="@+id/tv_music_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:background="@android:color/transparent"
+            android:ellipsize="marquee"
+            android:singleLine="true"
+            android:textColor="@android:color/white"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+    </RelativeLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tv_play_singer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="20dp"
+            android:layout_marginTop="10dp"
+            android:orientation="horizontal"
+            android:textColor="@android:color/white"
+            android:textSize="15sp" />
+
+        <com.example.lrving.musicplayerapp.view.CDView
+            android:id="@+id/play_cdView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center" />
+
+        <com.example.lrving.musicplayerapp.view.LrcView xmlns:lrc="http://schemas.android.com/apk/res/com.example.lrving.musicplayerapp"
+            android:id="@+id/play_first_lrc"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="10dp"
+            lrc:currentTextColor="@android:color/white"
+            lrc:dividerHeight="0dp"
+            lrc:normalTextColor="@android:color/white"
+            lrc:rows="1"
+            lrc:textSize="20sp" />
+
+
+    </LinearLayout>
+
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="20dp"
+        android:layout_marginTop="200dp"
+        android:background="@android:color/transparent"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/tv_used_time"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_gravity="right"
+                android:layout_marginLeft="14dp"
+                android:gravity="right"
+                android:text="-:--"
+                android:textColor="#ffffff"
+                android:textSize="18sp" />
+
+            <SeekBar
+                android:id="@+id/sb_play_progress"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                android:layout_marginTop="10dp"
+                android:layout_weight="1"
+                android:max="100"
+                android:progressDrawable="@drawable/play_progressbar"
+                android:thumb="@drawable/progress_thumb"
+                android:thumbOffset="5dp" />
+
+            <TextView
+                android:id="@+id/tv_duration"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_gravity="left"
+                android:layout_marginRight="14dp"
+                android:gravity="left"
+                android:text="-:--"
+                android:textColor="#ffffff"
+                android:textSize="18sp" />
+
+        </LinearLayout>
+
+
+        <LinearLayout
+            android:id="@+id/ll_play_controller"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="20dp"
+            android:background="@android:color/transparent"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <ImageButton
+                android:id="@+id/ib_play_pre"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@android:color/transparent"
+                android:contentDescription="@string/app_name"
+                android:onClick="pre"
+                android:src="@drawable/player_btn_pre_normal" />
+
+            <ImageButton
+                android:id="@+id/ib_play_start"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="20dp"
+                android:layout_marginRight="20dp"
+                android:background="@android:color/transparent"
+                android:contentDescription="@string/app_name"
+                android:onClick="play"
+                android:src="@drawable/player_btn_play_normal" />
+
+            <ImageButton
+                android:id="@+id/ib_play_next"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@android:color/transparent"
+                android:contentDescription="@string/app_name"
+                android:onClick="next"
+                android:src="@drawable/player_btn_next_normal" />
+        </LinearLayout>
+    </LinearLayout>
+
+</LinearLayout>
