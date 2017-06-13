@@ -27,13 +27,13 @@ import java.io.File;
 public class LocalFragment extends Fragment implements AdapterView.OnItemClickListener {
     private ListView mListView;
     private ListActivity mActivity;
+    private PlayActivity mPlayActivity;
     private static final String TAG = LocalFragment.class.getSimpleName();
     private MusicListAdapter mMusicListAdapter = new MusicListAdapter();
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setRetainInstance(true);
-
     }
 
     @Override
@@ -41,6 +41,7 @@ public class LocalFragment extends Fragment implements AdapterView.OnItemClickLi
         super.onAttach(activity);
         mActivity = (ListActivity) activity;
     }
+    @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState)
     {
@@ -52,13 +53,13 @@ public class LocalFragment extends Fragment implements AdapterView.OnItemClickLi
     @Override
     public void onStart() {
         super.onStart();
-        mActivity.allowBindService();
+//        mActivity.allowBindService();
     }
 
     @Override
     public void onStop() {
         super.onStop();
-        mActivity.allowUnbindService();
+//        mActivity.allowUnbindService();
     }
 
 
@@ -107,8 +108,8 @@ public class LocalFragment extends Fragment implements AdapterView.OnItemClickLi
         Log.e(TAG, ""+position);
     }
     private void play(int position) {
-        int pos = mActivity.getPlayService().play(position);
-        onPlay(pos);
+        int pos = mActivity.getPlayService().newPlay(position);
+//        onPlay(pos);
     }
 
     private void onPlay(int pos) {

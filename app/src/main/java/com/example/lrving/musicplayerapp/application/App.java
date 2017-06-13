@@ -2,9 +2,11 @@ package com.example.lrving.musicplayerapp.application;
 
 import android.app.Application;
 import android.content.Context;
+import android.content.Intent;
 import android.util.DisplayMetrics;
 import android.view.WindowManager;
 
+import com.example.lrving.musicplayerapp.service.PlayService;
 import com.example.lrving.musicplayerapp.utils.MusicUtils;
 
 /**
@@ -28,5 +30,6 @@ public class App extends Application {
         appScreenWidth=dm.widthPixels;
         appScreenheight=dm.heightPixels;
         MusicUtils.initMusicList();
+        startService(new Intent(this, PlayService.class));
     }
 }

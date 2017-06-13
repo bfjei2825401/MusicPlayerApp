@@ -34,22 +34,26 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
 
     private MediaPlayer mPlayer;                                //媒体播放类
     private AudioManager mManager;                              //音频管理类
-    private int mPlayingPosition;                               //当前播放的歌曲位置
+    private volatile int mPlayingPosition;                      //当前播放的歌曲位置
     private RemoteViews remoteViews;                            //通知栏布局
     private Notification notification;                          //通知栏
     private OnMusicEventListener mListener;                     //音乐事件
     private NotificationManager notificationManager;            //通知管理类
 
     private Boolean readyNotification = false;
-    private boolean isPrepared;
+    private volatile boolean isPrepared;
 
     private MyBroadCastReceiver receiver;
     private ExecutorService mProgressUpdatedListener = Executors.newSingleThreadExecutor();
 
     @Override
     public void onPrepared(MediaPlayer mp) {
-        mManager.requestAudioFocus(this, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN);
         this.isPrepared = true;
+        if (this.mListener != null) {
+            this.mListener.onChange(this.mPlayingPosition);
+        }
+        this.mManager.requestAudioFocus(this, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN);
+        this.mPlayer.start();
     }
 
     @Override
@@ -67,12 +71,9 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
     public void onCreate() {
         super.onCreate();
         //初始化MediaPlayer
-        mPlayer = new MediaPlayer();
-        this.mPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
-        mPlayer.setOnCompletionListener(this);
-        this.mPlayer.setWakeMode(getApplicationContext(), PowerManager.PARTIAL_WAKE_LOCK);
+        initMediaPlayer();
         //初始化AudioManager
-        mManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+        this.mManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
         //获取当前播放歌曲的位置
 //        this.mPlayingPosition = 0;
         this.mPlayingPosition = (Integer) SpUtils.get(this, "position", 0);
@@ -102,8 +103,7 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
         @Override
         public void run() {
             for (; ; ) {
-                if (mPlayer != null && mPlayer.isPlaying() &&
-                        mListener != null) {
+                if (isPlaying() && mListener != null) {
                     //
                     mListener.onPublish(mPlayer.getCurrentPosition());
                 }
@@ -184,31 +184,52 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
      */
     public int play(int position) {
 
-        if (position < 0) position = 0;
-        if (position >= MusicUtils.sMusicList.size())
-            position = MusicUtils.sMusicList.size() - 1;
+        int pos = playMode(position);
 
-        if (isPlaying()) {
-            pause();
-        } else if (this.isPrepared) {
+        if (this.isPrepared) {
             this.mPlayer.start();
+            setRemoteViews();
         } else {
             try {
-                this.mPlayer.stop();
+//                this.mPlayer.stop();
                 this.mPlayer.reset();
-                this.mPlayer.setDataSource(MusicUtils.sMusicList.get(position).getUri());
-                this.mPlayer.prepare();
-                this.mPlayingPosition = position;
-                start();
-                this.isPrepared = true;
-                //
-                if (mListener != null) mListener.onChange(this.mPlayingPosition);
+                this.mPlayer.setDataSource(MusicUtils.sMusicList.get(pos).getUri());
+                this.mPlayingPosition = pos;
+                this.mPlayer.prepareAsync();
+//                this.mPlayer.prepare();
+//                start();
+//                this.isPrepared = true;
+                if (mListener != null)
+                    mListener.onChange(this.mPlayingPosition);
             } catch (Exception e) {
                 e.printStackTrace();
             }
-
             SpUtils.put("position", this.mPlayingPosition);
+            if (!readyNotification) {
+                startNotification();
+            } else {
+                setRemoteViews();
+            }
+        }
 
+        return this.mPlayingPosition;
+    }
+
+    public int newPlay(int position) {
+        int pos = playMode(position);
+        this.isPrepared = false;
+        if (mPlayer != null) {
+            mPlayer.reset();
+            try {
+                this.mPlayer.setDataSource(MusicUtils.sMusicList.get(pos).getUri());
+                this.mPlayingPosition = pos;
+                this.mPlayer.prepareAsync();
+                if (mListener != null)
+                    mListener.onChange(this.mPlayingPosition);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            SpUtils.put("position", this.mPlayingPosition);
             if (!readyNotification) {
                 startNotification();
             } else {
@@ -228,28 +249,8 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
      * @return
      */
     public boolean isPlaying() {
-        return mPlayer != null && mPlayer.isPlaying();
+        return this.mPlayer != null && this.isPrepared && this.mPlayer.isPlaying();
     }
-
-//    /**
-//     * 继续播放
-//     *
-//     * @return 当前播放的位置 默认为0
-//     */
-//    public int resume() {
-//        if (isPlaying()) {
-//            return -1;
-//        } else if (mPlayingPosition <= 0 || mPlayingPosition >= MusicUtils.sMusicList.size()) {
-//            mPlayingPosition = 0;
-//            play();
-//            setRemoteViews();
-//            return mPlayingPosition;
-//        } else {
-//            mPlayer.start();
-//            setRemoteViews();
-//            return mPlayingPosition;
-//        }
-//    }
 
     /**
      * 暂停播放
@@ -258,7 +259,7 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
      */
     public int pause() {
         if (isPlaying()) {
-            mPlayer.pause();
+            this.mPlayer.pause();
             setRemoteViews();
             return mPlayingPosition;
         }
@@ -272,14 +273,8 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
      */
     public int next() {
         this.mPlayingPosition++;
-        if (this.mPlayingPosition > MusicUtils.sMusicList.size() - 1) {
-            this.mPlayingPosition = 0;
-        }
-        if (this.mPlayer != null) {
-            this.mPlayer.stop();
-            this.isPrepared = false;
-        }
-        setRemoteViews();
+//        setRemoteViews();
+        this.isPrepared = false;
         return play(this.mPlayingPosition);
     }
 
@@ -290,14 +285,10 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
      */
     public int pre() {
         this.mPlayingPosition--;
-        if (this.mPlayingPosition < 0) {
-            this.mPlayingPosition = MusicUtils.sMusicList.size() - 1;
-        }
-        if (this.mPlayer != null) {
-            this.mPlayer.stop();
-            this.isPrepared = false;
-        }
-        setRemoteViews();
+//        if (this.mPlayer == null) {
+//            initMediaPlayer();
+//        }
+//        setRemoteViews();
         this.isPrepared = false;
         return play(this.mPlayingPosition);
     }
@@ -317,7 +308,7 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
      * @param l
      */
     public void setOnMusicEventListener(OnMusicEventListener l) {
-        mListener = l;
+        this.mListener = l;
     }
 
     @Override
@@ -338,6 +329,7 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
      */
     public interface OnMusicEventListener {
         void onPublish(int percent);
+
         void onChange(int position);
     }
 
@@ -385,7 +377,11 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
                         pre();
                         break;
                     case 2:
-                        play();
+                        if (isPlaying()) {
+                            pause();
+                        } else {
+                            play();
+                        }
                         break;
                     case 3:
                         next();
@@ -409,26 +405,33 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
 
     @Override
     public void onAudioFocusChange(int focusChange) {
-        if (isPlaying()) {
-            switch (focusChange) {
-                case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT: {
+        switch (focusChange) {
+            case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT: {
+                if (this.isPrepared) {
                     this.mPlayer.pause();
-                    break;
                 }
-                case AudioManager.AUDIOFOCUS_GAIN: {
-                    this.mPlayer.start();
-                    break;
-                }
-                case AudioManager.AUDIOFOCUS_LOSS: {
-                    this.mPlayer.stop();
-                    break;
-                }
-                case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK:
-                    // 失去音频焦点，无需停止播放，降低声音即可
-                    this.mPlayer.setVolume(0.1f, 0.1f);
-                    break;
+                break;
             }
+            case AudioManager.AUDIOFOCUS_GAIN: {
+                if (this.isPrepared) {
+                    this.mPlayer.start();
+                }
+                break;
+            }
+            case AudioManager.AUDIOFOCUS_LOSS: {
+                if (this.isPrepared) {
+                    this.mPlayer.stop();
+                }
+                break;
+            }
+            case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK:
+                // 失去音频焦点，无需停止播放，降低声音即可
+                if (this.isPrepared) {
+                    this.mPlayer.setVolume(0.1f, 0.1f);
+                }
+                break;
         }
+
     }
 
     public int getUsedTime() {
@@ -445,4 +448,19 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
         return 0;
     }
 
+    private void initMediaPlayer() {
+        this.mPlayer = new MediaPlayer();
+        this.mPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
+        this.mPlayer.setOnCompletionListener(this);
+        this.mPlayer.setOnPreparedListener(this);
+        this.mPlayer.setWakeMode(getApplicationContext(), PowerManager.PARTIAL_WAKE_LOCK);
+    }
+
+    private int playMode(int position) {
+        if (position < 0)
+            position = MusicUtils.sMusicList.size() - 1;
+        if (position >= MusicUtils.sMusicList.size())
+            position = 0;
+        return position;
+    }
 }

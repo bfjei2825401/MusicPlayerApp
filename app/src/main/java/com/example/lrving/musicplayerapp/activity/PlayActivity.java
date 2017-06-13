@@ -1,5 +1,7 @@
 package com.example.lrving.musicplayerapp.activity;
 
+import android.animation.Animator;
+import android.animation.AnimatorInflater;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -52,8 +54,15 @@ public class PlayActivity extends AppCompatActivity implements View.OnClickListe
 
     Handler mUpdateHandler = new Handler() {
         public void handleMessage(Message msg) {
-            if (msg.what == 0) {
-                mTextUsedTime.setText(transformMsec(msg.getData().getInt("progress")));
+            switch (msg.what) {
+                case 0: {
+                    mTextUsedTime.setText(transformMsec(msg.getData().getInt("progress")));
+                    break;
+                }
+                case 1: {
+                    disPlay(msg.getData().getInt("position"));
+                    setLrc(msg.getData().getInt("position"));
+                }
             }
         }
     };
@@ -63,8 +72,9 @@ public class PlayActivity extends AppCompatActivity implements View.OnClickListe
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_play);
         getIntentPos();
-        setupViews();
+        initViews();
         initEvent();
+        allowBindService();
     }
 
     private void initEvent() {
@@ -77,7 +87,7 @@ public class PlayActivity extends AppCompatActivity implements View.OnClickListe
 
     }
 
-    private void setupViews() {
+    private void initViews() {
 
         mImagPlayBack = (ImageView) findViewById(R.id.iv_play_back);
 
@@ -111,7 +121,7 @@ public class PlayActivity extends AppCompatActivity implements View.OnClickListe
         Bitmap bmp = MusicIconLoader.getInstance().load(music.getImage());
         if (bmp == null) bmp = BitmapFactory.decodeResource(getResources(), R.drawable.icon);
         mCdView.setImage(ImageTools.scaleBitmap(bmp, (int) (App.appScreenWidth * 0.4)));
-
+        mCdView.reset();
         if (mPlayService.isPlaying()) {
             mCdView.start();
             mStartPlayButton.setImageResource(R.drawable.player_btn_pause_normal);
@@ -130,44 +140,72 @@ public class PlayActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     protected void onPause() {
         super.onPause();
-        allowUnbindService();
+//        allowUnbindService();
     }
 
     @Override
     protected void onResume() {
-        super.onResume();
         allowBindService();
+        super.onResume();
     }
 
+    @Override
+    protected void onDestroy(){
+        allowUnbindService();
+        super.onDestroy();
+    }
+//    @Override
+//    protected void onStart() {
+//        super.onStart();
+//        allowBindService();
+//        getIntentPos();
+//        play(this.pos);
+//    }
 
     /**
      * 上一曲
      */
     public void pre() {
-        mPlayService.pre(); // 上一曲
+        this.mCdView.pause();
+//        this.mCdView.reset();
+        this.mPlayService.pre(); // 上一曲
     }
 
     /**
-     * 播放 or 暂停
+     * 播放
      */
     public void play() {
-        if (this.mPlayService.isPlaying()) {
-            this.mPlayService.pause(); // 暂停
-            mStartPlayButton.setImageResource(R.drawable.player_btn_play_normal);
-            this.mCdView.pause();
-        } else {
-            this.mCdView.start();
-            pos = mPlayService.play();
-            disPlay(pos);
-            //onPlay(mPlayService.resume()); // 播放
-        }
+//        this.mPlayService.pause(); // 暂停
+//        this.mStartPlayButton.setImageResource(R.drawable.player_btn_play_normal);
+//        this.mCdView.pause();
+        this.mPlayService.play();
+        this.mStartPlayButton.setImageResource(R.drawable.player_btn_pause_normal);
+        this.mCdView.start();
+//            disPlay(this.pos);
+        //onPlay(mPlayService.resume()); // 播放
+    }
+    public void play(int pos) {
+        this.mPlayService.play(pos);
+        this.mStartPlayButton.setImageResource(R.drawable.player_btn_pause_normal);
+        this.mCdView.start();
+    }
+
+    /**
+     * 暂停
+     */
+    public void pause() {
+        this.mPlayService.pause(); // 暂停
+        this.mStartPlayButton.setImageResource(R.drawable.player_btn_play_normal);
+        this.mCdView.pause();
     }
 
     /**
      * 上一曲
      */
     public void next() {
-        mPlayService.next(); // 上一曲
+        this.mCdView.pause();
+//        this.mCdView.reset();
+        this.mPlayService.next(); // 上一曲
     }
 
     private void setLrc(int position) {
@@ -182,13 +220,25 @@ public class PlayActivity extends AppCompatActivity implements View.OnClickListe
     public void onPublish(int progress) {
         mPlaySeekBar.setProgress(progress);
         if (lrcView.hasLrc()) lrcView.changeCurrent(progress);
+        Message msg = this.mUpdateHandler.obtainMessage();
+        msg.what = 0;
+        Bundle bundle = new Bundle();
+        bundle.putInt("progress", progress);
+        msg.setData(bundle);
+        this.mUpdateHandler.sendMessage(msg);
     }
 
     //歌曲切换界面同步
     public void onChange(int position) {
-        disPlay(position);
+        Message msg = this.mUpdateHandler.obtainMessage();
+        msg.what = 1;
+        Bundle bundle = new Bundle();
+        bundle.putInt("position", position);
+        msg.setData(bundle);
+        this.mUpdateHandler.sendMessage(msg);
+//        disPlay(position);
         Log.d("Log", "onChange---->Lrc");
-        setLrc(position);
+//        setLrc(position);
     }
 
     private ServiceConnection mPlayServiceConnection = new ServiceConnection() {
@@ -225,7 +275,11 @@ public class PlayActivity extends AppCompatActivity implements View.OnClickListe
                 break;
             }
             case R.id.ib_play_start: {
-                play();
+                if (this.mPlayService.isPlaying()) {
+                    pause();
+                } else {
+                    play();
+                }
                 break;
             }
             case R.id.ib_play_pre: {
@@ -247,12 +301,6 @@ public class PlayActivity extends AppCompatActivity implements View.OnClickListe
                 @Override
                 public void onPublish(int progress) {
                     PlayActivity.this.onPublish(progress);
-                    Message msg = PlayActivity.this.mUpdateHandler.obtainMessage();
-                    msg.what = 0;
-                    Bundle bundle = new Bundle();
-                    bundle.putInt("progress", progress);
-                    msg.setData(bundle);
-                    PlayActivity.this.mUpdateHandler.sendMessage(msg);
                 }
 
                 @Override
@@ -297,7 +345,7 @@ public class PlayActivity extends AppCompatActivity implements View.OnClickListe
         }
         result += minute + ":";
         if (second < 10) {
-            result += "0"+second;
+            result += "0" + second;
         } else {
             result += second;
         }

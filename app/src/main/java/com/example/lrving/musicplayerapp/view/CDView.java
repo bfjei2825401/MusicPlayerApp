@@ -13,6 +13,7 @@ import android.os.Handler;
 import android.os.Message;
 import android.util.AttributeSet;
 import android.view.View;
+import android.view.animation.Animation;
 
 import com.example.lrving.musicplayerapp.R;
 
@@ -23,6 +24,7 @@ import com.example.lrving.musicplayerapp.R;
 @SuppressLint("HandlerLeak")
 public class CDView extends View {
     private static final int MSG_RUN = 0x00000100;
+    private static final int MSG_STOP = 0x00000101;
     private static final int TIME_UPDATE = 50;
 
     private Bitmap mCircleBitmap;
@@ -131,7 +133,6 @@ public class CDView extends View {
     }
 
     /**
-     *
      * @param bmp
      */
     public void setImage(Bitmap bmp) {
@@ -150,33 +151,41 @@ public class CDView extends View {
     }
 
     /**
-     * ߪʼѽת
+     *
      */
     public void start() {
-        if (isRunning)
-            return;
         isRunning = true;
-        mHandler.sendEmptyMessageDelayed(MSG_RUN, TIME_UPDATE);
+        mHandler.sendEmptyMessage(MSG_RUN);
+//        mHandler.sendEmptyMessageDelayed(MSG_RUN, TIME_UPDATE);
     }
 
     /**
-     * ՝ͣѽת
+     *
      */
     public void pause() {
-        if (!isRunning)
-            return;
-        isRunning = false;
+        mHandler.sendEmptyMessage(MSG_STOP);
+//        mHandler.sendEmptyMessageDelayed(MSG_RUN, TIME_UPDATE);
+    }
+
+    public void reset(){
+        mRotation = 0.0f;
     }
 
     private Handler mHandler = new Handler() {
         public void handleMessage(Message msg) {
-            if (msg.what == MSG_RUN) {
-                if (isRunning) {
-                    mRotation += 1.0f;
-                    if (mRotation >= 360)
-                        mRotation = 0;
-                    invalidate();
-                    sendEmptyMessageDelayed(MSG_RUN, TIME_UPDATE);
+            switch (msg.what) {
+                case MSG_RUN: {
+                    if (isRunning) {
+                        mRotation += 1.0f;
+                        if (mRotation >= 360.0f)
+                            mRotation = 0.0f;
+                        invalidate();
+                        sendEmptyMessageDelayed(MSG_RUN, TIME_UPDATE);
+                        break;
+                    }
+                }
+                case MSG_STOP: {
+                    isRunning = false;
                 }
             }
         }

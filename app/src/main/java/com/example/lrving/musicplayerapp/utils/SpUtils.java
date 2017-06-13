@@ -27,7 +27,8 @@ public class SpUtils {
             editor.putString(key, (String) value);
         }
 
-        editor.commit();
+        editor.apply();
+//        editor.commit();
     }
 
     public static Object get(Context context, String key, Object defaultObject) {

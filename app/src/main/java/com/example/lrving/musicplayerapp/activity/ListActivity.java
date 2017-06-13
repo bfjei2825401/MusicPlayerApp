@@ -18,6 +18,7 @@ import com.example.lrving.musicplayerapp.R;
 import com.example.lrving.musicplayerapp.fragment.LocalFragment;
 import com.example.lrving.musicplayerapp.fragment.OnlineFragment;
 import com.example.lrving.musicplayerapp.service.PlayService;
+import com.example.lrving.musicplayerapp.utils.SpUtils;
 
 public class ListActivity extends AppCompatActivity implements View.OnClickListener {
     private static final int TAB_LOCAL = 0;
@@ -41,42 +42,48 @@ public class ListActivity extends AppCompatActivity implements View.OnClickListe
         setContentView(R.layout.activity_list);
         initView();
         initEvent();
+        allowBindService();
         setSelect(0);
     }
 
     //初始化点击事件
-    private void initEvent(){
+    private void initEvent() {
         ll_local.setOnClickListener(this);
         ll_online.setOnClickListener(this);
         ib_menu.setOnClickListener(this);
     }
 
-    private void initView(){
-        tv_title= (TextView) findViewById(R.id.tv_title);
-        ll_local= (LinearLayout) findViewById(R.id.ll_local);
-        ll_online= (LinearLayout) findViewById(R.id.ll_online);
-        ib_local= (ImageButton) findViewById(R.id.ib_local);
-        ib_online= (ImageButton) findViewById(R.id.ib_online);
-        ib_menu= (ImageButton) findViewById(R.id.ib_menu);
+    private void initView() {
+        tv_title = (TextView) findViewById(R.id.tv_title);
+        ll_local = (LinearLayout) findViewById(R.id.ll_local);
+        ll_online = (LinearLayout) findViewById(R.id.ll_online);
+        ib_local = (ImageButton) findViewById(R.id.ib_local);
+        ib_online = (ImageButton) findViewById(R.id.ib_online);
+        ib_menu = (ImageButton) findViewById(R.id.ib_menu);
 
     }
 
     /**
      * 切换图片至暗色
      */
-    private void resetImgs(){
+    private void resetImgs() {
         ib_local.setImageResource(R.drawable.icon_user_normal);
         ib_online.setImageResource(R.drawable.icon_search_normal);
     }
+
     @Override
     public void onClick(View v) {
         resetImgs();
-        switch (v.getId()){
+        switch (v.getId()) {
             case R.id.ll_local:
                 setSelect(0);
                 break;
             case R.id.ll_online:
                 setSelect(1);
+                break;
+            case R.id.ib_menu:
+                Intent intent = new Intent(this, PlayActivity.class);
+                startActivity(intent);
                 break;
             default:
                 break;
@@ -84,26 +91,26 @@ public class ListActivity extends AppCompatActivity implements View.OnClickListe
 
     }
 
-    public void setSelect(int i){
+    public void setSelect(int i) {
         FragmentManager fm = getSupportFragmentManager();
         FragmentTransaction transaction = fm.beginTransaction();
         hideFragment(transaction);
-        switch(i){
+        switch (i) {
             case TAB_LOCAL:
-                if(localFragment==null){
+                if (localFragment == null) {
                     localFragment = new LocalFragment();
-                    transaction.add(R.id.id_content,localFragment);
-                }else{
+                    transaction.add(R.id.id_content, localFragment);
+                } else {
                     transaction.show(localFragment);
                 }
                 ib_local.setImageResource(R.drawable.icon_user_selected);
                 tv_title.setText("本地音乐");
                 break;
             case TAB_ONLINE:
-                if(onlineFragment==null){
+                if (onlineFragment == null) {
                     onlineFragment = new OnlineFragment();
-                    transaction.add(R.id.id_content,onlineFragment);
-                }else{
+                    transaction.add(R.id.id_content, onlineFragment);
+                } else {
                     transaction.show(onlineFragment);
                 }
                 ib_online.setImageResource(R.drawable.icon_search_selected);
@@ -118,7 +125,7 @@ public class ListActivity extends AppCompatActivity implements View.OnClickListe
 
     private void hideFragment(FragmentTransaction transaction) {
 
-        if (onlineFragment!=null){
+        if (onlineFragment != null) {
             transaction.hide(onlineFragment);
         }
 
@@ -152,10 +159,27 @@ public class ListActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     /**
-     * fragment的view消失后回调
+     * Fragment的view消失后回调
      */
     public void allowUnbindService() {
         unbindService(mPlayServiceConnection);
+    }
+
+    @Override
+    protected void onResume() {
+        allowBindService();
+        super.onResume();
+    }
+
+    @Override
+    protected void onDestroy() {
+        allowUnbindService();
+        super.onDestroy();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
     }
 
 }

@@ -22,7 +22,8 @@
             android:layout_height="wrap_content"
             android:contentDescription="@string/app_name"
             android:padding="10dp"
-            android:src="@drawable/arrow_right_normal" />
+            android:src="@drawable/arrow_right_normal"
+            />
 
         <TextView
             android:id="@+id/tv_music_title"
