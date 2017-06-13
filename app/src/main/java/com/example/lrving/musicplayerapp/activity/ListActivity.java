@@ -18,6 +18,7 @@ import com.example.lrving.musicplayerapp.R;
 import com.example.lrving.musicplayerapp.fragment.LocalFragment;
 import com.example.lrving.musicplayerapp.fragment.OnlineFragment;
 import com.example.lrving.musicplayerapp.service.PlayService;
+import com.example.lrving.musicplayerapp.utils.MusicUtils;
 import com.example.lrving.musicplayerapp.utils.SpUtils;
 
 public class ListActivity extends AppCompatActivity implements View.OnClickListener {
@@ -83,6 +84,9 @@ public class ListActivity extends AppCompatActivity implements View.OnClickListe
                 break;
             case R.id.ib_menu:
                 Intent intent = new Intent(this, PlayActivity.class);
+                intent.setAction(PlayService.CHANGE_MUSIC_LIST);
+                intent.putExtra("musicList", MusicUtils.sMusicList);
+                intent.putExtra("pos", (int) SpUtils.get(this, "position", 0));
                 startActivity(intent);
                 break;
             default:

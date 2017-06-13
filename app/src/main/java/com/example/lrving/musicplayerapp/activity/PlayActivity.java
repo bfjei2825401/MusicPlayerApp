@@ -31,6 +31,9 @@ import com.example.lrving.musicplayerapp.utils.MusicUtils;
 import com.example.lrving.musicplayerapp.view.CDView;
 import com.example.lrving.musicplayerapp.view.LrcView;
 
+import java.io.Serializable;
+import java.util.List;
+
 public class PlayActivity extends AppCompatActivity implements View.OnClickListener, SeekBar.OnSeekBarChangeListener {
     private PlayService mPlayService;
     private int pos;
@@ -71,10 +74,11 @@ public class PlayActivity extends AppCompatActivity implements View.OnClickListe
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_play);
-        getIntentPos();
+//        this.pos = getIntent().getIntExtra("pos", -1);
+//        getIntentPos();
         initViews();
         initEvent();
-        allowBindService();
+//        allowBindService();
     }
 
     private void initEvent() {
@@ -150,17 +154,23 @@ public class PlayActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     @Override
-    protected void onDestroy(){
+    protected void onDestroy() {
         allowUnbindService();
         super.onDestroy();
     }
-//    @Override
-//    protected void onStart() {
-//        super.onStart();
-//        allowBindService();
-//        getIntentPos();
-//        play(this.pos);
-//    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        allowBindService();
+        Intent intent = getIntent();
+        Intent serviceIntent = new Intent(this, PlayService.class);
+        serviceIntent.setAction(intent.getAction());
+        serviceIntent.putExtra("musicList", intent.getSerializableExtra("musicList"));
+        this.pos = intent.getExtras().getInt("pos", -1);
+        serviceIntent.putExtra("pos", this.pos);
+        startService(serviceIntent);
+    }
 
     /**
      * 上一曲
@@ -184,6 +194,7 @@ public class PlayActivity extends AppCompatActivity implements View.OnClickListe
 //            disPlay(this.pos);
         //onPlay(mPlayService.resume()); // 播放
     }
+
     public void play(int pos) {
         this.mPlayService.play(pos);
         this.mStartPlayButton.setImageResource(R.drawable.player_btn_pause_normal);

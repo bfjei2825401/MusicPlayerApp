@@ -1,10 +1,13 @@
 package com.example.lrving.musicplayerapp.domain;
 
+
+import java.io.Serializable;
+
 /**
  * Created by Lrving on 2017/6/7.
  */
 
-public class Music {
+public class Music implements Serializable{
     private int id;//音乐id
     private String title;//音乐标题
     private String uri;//音乐路径
@@ -60,4 +63,5 @@ public class Music {
     public void setArtist(String artist) {
         this.artist = artist;
     }
+
 }

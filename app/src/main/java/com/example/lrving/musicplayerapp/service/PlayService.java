@@ -12,6 +12,7 @@ import android.graphics.Bitmap;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Binder;
+import android.os.Bundle;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.os.SystemClock;
@@ -20,11 +21,13 @@ import android.widget.RemoteViews;
 
 import com.example.lrving.musicplayerapp.R;
 import com.example.lrving.musicplayerapp.activity.PlayActivity;
+import com.example.lrving.musicplayerapp.domain.Music;
 import com.example.lrving.musicplayerapp.utils.ImageTools;
 import com.example.lrving.musicplayerapp.utils.MusicIconLoader;
 import com.example.lrving.musicplayerapp.utils.MusicUtils;
 import com.example.lrving.musicplayerapp.utils.SpUtils;
 
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -45,6 +48,10 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
 
     private MyBroadCastReceiver receiver;
     private ExecutorService mProgressUpdatedListener = Executors.newSingleThreadExecutor();
+
+    private List<Music> musicList;
+
+    public static final String CHANGE_MUSIC_LIST = "CHANGE_MUSIC_LIST";
 
     @Override
     public void onPrepared(MediaPlayer mp) {
@@ -76,15 +83,35 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
         this.mManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
         //获取当前播放歌曲的位置
 //        this.mPlayingPosition = 0;
-        this.mPlayingPosition = (Integer) SpUtils.get(this, "position", 0);
+        this.mPlayingPosition = 0;
         // 开始更新进度的线程
         mProgressUpdatedListener.execute(mPublishProgressRunnable);
-
         this.isPrepared = false;
-        if (MusicUtils.sMusicList.size() != 0) {
-            startNotification();
-            readyNotification = true;
+    }
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        if (intent.getAction() != null) {
+            switch (intent.getAction()) {
+                case CHANGE_MUSIC_LIST: {
+                    this.musicList = (List<Music>) intent.getSerializableExtra("musicList");
+                    if (this.musicList.size() > 0) {
+                        startNotification();
+                        readyNotification = true;
+                    }
+                    if (this.mPlayingPosition != intent.getExtras().getInt("pos", 0)) {
+                        this.mPlayingPosition = intent.getExtras().getInt("pos", 0);
+                        newPlay(this.mPlayingPosition);
+                    } else {
+                        if (this.mPlayer != null && isPrepared && !this.isPlaying()) {
+                            this.mPlayer.start();
+                        }
+                    }
+                    break;
+                }
+            }
         }
+        return super.onStartCommand(intent, flags, startId);
     }
 
     @Override
@@ -193,7 +220,7 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
             try {
 //                this.mPlayer.stop();
                 this.mPlayer.reset();
-                this.mPlayer.setDataSource(MusicUtils.sMusicList.get(pos).getUri());
+                this.mPlayer.setDataSource(this.musicList.get(pos).getUri());
                 this.mPlayingPosition = pos;
                 this.mPlayer.prepareAsync();
 //                this.mPlayer.prepare();
@@ -216,31 +243,8 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
     }
 
     public int newPlay(int position) {
-        int pos = playMode(position);
-        this.isPrepared = false;
-        if (mPlayer != null) {
-            mPlayer.reset();
-            try {
-                this.mPlayer.setDataSource(MusicUtils.sMusicList.get(pos).getUri());
-                this.mPlayingPosition = pos;
-                this.mPlayer.prepareAsync();
-                if (mListener != null)
-                    mListener.onChange(this.mPlayingPosition);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            SpUtils.put("position", this.mPlayingPosition);
-            if (!readyNotification) {
-                startNotification();
-            } else {
-                setRemoteViews();
-            }
-        }
-        return this.mPlayingPosition;
-    }
-
-    private void start() {
-        mPlayer.start();
+        isPrepared = false;
+        return play(position);
     }
 
     /**
@@ -273,7 +277,6 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
      */
     public int next() {
         this.mPlayingPosition++;
-//        setRemoteViews();
         this.isPrepared = false;
         return play(this.mPlayingPosition);
     }
@@ -285,10 +288,6 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
      */
     public int pre() {
         this.mPlayingPosition--;
-//        if (this.mPlayer == null) {
-//            initMediaPlayer();
-//        }
-//        setRemoteViews();
         this.isPrepared = false;
         return play(this.mPlayingPosition);
     }
@@ -344,13 +343,13 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
 
     public void setRemoteViews() {
         remoteViews.setTextViewText(R.id.music_name,
-                MusicUtils.sMusicList.get(
+                this.musicList.get(
                         getPlayingPosition()).getTitle());
         remoteViews.setTextViewText(R.id.music_author,
-                MusicUtils.sMusicList.get(
+                this.musicList.get(
                         getPlayingPosition()).getArtist());
         Bitmap icon = MusicIconLoader.getInstance().load(
-                MusicUtils.sMusicList.get(
+                this.musicList.get(
                         getPlayingPosition()).getImage());
         remoteViews.setImageViewBitmap(R.id.music_icon, icon == null
                 ? ImageTools.scaleBitmap(R.drawable.icon)
@@ -443,7 +442,7 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
 
     public int getDuration() {
         if (this.isPrepared) {
-            return MusicUtils.sMusicList.get(this.mPlayingPosition).getLength();
+            return this.musicList.get(this.mPlayingPosition).getLength();
         }
         return 0;
     }
@@ -458,9 +457,10 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
 
     private int playMode(int position) {
         if (position < 0)
-            position = MusicUtils.sMusicList.size() - 1;
-        if (position >= MusicUtils.sMusicList.size())
+            position = this.musicList.size() - 1;
+        if (position >= this.musicList.size())
             position = 0;
         return position;
     }
+
 }

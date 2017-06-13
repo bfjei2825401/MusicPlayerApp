@@ -19,9 +19,11 @@ import com.example.lrving.musicplayerapp.activity.ListActivity;
 import com.example.lrving.musicplayerapp.activity.PlayActivity;
 import com.example.lrving.musicplayerapp.adapter.MusicListAdapter;
 import com.example.lrving.musicplayerapp.domain.Music;
+import com.example.lrving.musicplayerapp.service.PlayService;
 import com.example.lrving.musicplayerapp.utils.MusicUtils;
 
 import java.io.File;
+import java.io.Serializable;
 
 
 public class LocalFragment extends Fragment implements AdapterView.OnItemClickListener {
@@ -30,6 +32,7 @@ public class LocalFragment extends Fragment implements AdapterView.OnItemClickLi
     private PlayActivity mPlayActivity;
     private static final String TAG = LocalFragment.class.getSimpleName();
     private MusicListAdapter mMusicListAdapter = new MusicListAdapter();
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -41,15 +44,16 @@ public class LocalFragment extends Fragment implements AdapterView.OnItemClickLi
         super.onAttach(activity);
         mActivity = (ListActivity) activity;
     }
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState)
-    {
+                             Bundle savedInstanceState) {
         View mView = inflater.inflate(R.layout.fragment_local, container, false);
         setupViews(mView);
 
         return mView;
     }
+
     @Override
     public void onStart() {
         super.onStart();
@@ -89,7 +93,7 @@ public class LocalFragment extends Fragment implements AdapterView.OnItemClickLi
                                     Music music = MusicUtils.sMusicList.remove(pos);
                                     mMusicListAdapter.notifyDataSetChanged();
                                     if (new File(music.getUri()).delete()) {
-                                        Toast.makeText(mActivity,"删除成功",Toast.LENGTH_SHORT);
+                                        Toast.makeText(mActivity, "删除成功", Toast.LENGTH_SHORT);
                                     }
                                 }
                             });
@@ -102,19 +106,22 @@ public class LocalFragment extends Fragment implements AdapterView.OnItemClickLi
     @Override
     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
         Intent intent = new Intent(mActivity, PlayActivity.class);
+        intent.setAction(PlayService.CHANGE_MUSIC_LIST);
         intent.putExtra("pos", position);
+        intent.putExtra("musicList", MusicUtils.sMusicList);
         startActivity(intent);
-        play(position);
-        Log.e(TAG, ""+position);
+//        play(position);
+        Log.e(TAG, "" + position);
     }
-    private void play(int position) {
-        int pos = mActivity.getPlayService().newPlay(position);
-//        onPlay(pos);
-    }
+
+//    private void play(int position) {
+//        int pos = mActivity.getPlayService().newPlay(position);
+////        onPlay(pos);
+//    }
 
     private void onPlay(int pos) {
         //新启动一个线程更新通知栏，防止更新时间过长，导致界面卡顿！
-        new Thread(){
+        new Thread() {
             @Override
             public void run() {
                 super.run();
